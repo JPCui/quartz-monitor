@@ -1,0 +1,129 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<beans xmlns="http://www.springframework.org/schema/beans"
+	xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xmlns:mvc="http://www.springframework.org/schema/mvc"
+	xmlns:context="http://www.springframework.org/schema/context" xmlns:p="http://www.springframework.org/schema/p"
+	xsi:schemaLocation="
+	http://www.springframework.org/schema/mvc   
+	http://www.springframework.org/schema/mvc/spring-mvc.xsd   
+	http://www.springframework.org/schema/beans   
+	http://www.springframework.org/schema/beans/spring-beans.xsd   
+	http://www.springframework.org/schema/context   
+	http://www.springframework.org/schema/context/spring-context.xsd">
+
+	<mvc:annotation-driven></mvc:annotation-driven>
+
+	<context:component-scan base-package="cn.cjp.*.web">
+		<context:include-filter type="annotation"
+			expression="org.springframework.stereotype.Controller" />
+	</context:component-scan>
+
+	<!-- -->
+	<bean
+		class="org.springframework.web.servlet.mvc.method.annotation.RequestMappingHandlerAdapter">
+		<!-- -->
+		<property name="messageConverters">
+			<list>
+				<bean
+					class="org.springframework.http.converter.StringHttpMessageConverter">
+					<property name="supportedMediaTypes">
+						<list>
+							<value>text/html;charset=utf-8</value>
+							<value>application/xml;charset=UTF-8</value>
+							<value>application/json;charset=UTF-8</value>
+						</list>
+					</property>
+				</bean>
+			</list>
+		</property>
+	</bean>
+	<!-- SpringMVC Config End -->
+
+	<!-- Restful Config Begin -->
+	<!-- 根据客户端的不同的请求决定不同的view进行响应, 如 /blog/1.json /blog/1.xml -->
+	<bean
+		class="org.springframework.web.servlet.view.ContentNegotiatingViewResolver">
+		<!-- 设置为true以忽略对Accept Header的支持 -->
+		<property name="ignoreAcceptHeader" value="true" />
+
+		<!-- 在没有扩展名时即: "/blog/1" 时的默认展现形式 -->
+		<property name="defaultContentType" value="text/html;charset=UTF-8" />
+
+		<!-- 扩展名至mimeType的映射,即 /blog.json => application/json -->
+		<property name="mediaTypes">
+			<map>
+				<entry key="html" value="text/html;charset=UTF-8" />
+				<entry key="htm" value="text/html;charset=UTF-8" />
+				<entry key="pdf" value="application/pdf" />
+				<!-- <entry key="xsl" value="application/vnd.ms-excel" /> -->
+				<!-- 解决乱码 -->
+				<!-- <entry key="xml" value="application/xml;charset=UTF-8" /> -->
+				<entry key="json" value="application/json" />
+			</map>
+		</property>
+
+		<!-- 用于开启 /blog/123?format=json 的支持 -->
+		<property name="favorParameter" value="false" />
+		<property name="viewResolvers">
+			<list>
+				<bean class="org.springframework.web.servlet.view.BeanNameViewResolver" />
+				<bean
+					class="org.springframework.web.servlet.view.InternalResourceViewResolver">
+					<property name="viewClass"
+						value="org.springframework.web.servlet.view.JstlView" />
+					<property name="prefix" value="/WEB-INF/pages"></property>
+					<property name="suffix" value=".jsp"></property>
+					<property name="contentType" value="text/html;charset=UTF-8"></property>
+				</bean>
+			</list>
+		</property>
+		<property name="defaultViews">
+			<list>
+				<!-- for application/json -->
+				<bean
+					class="org.springframework.web.servlet.view.json.MappingJackson2JsonView" />
+				<!-- for application/xml -->
+				<!-- <bean class="org.springframework.web.servlet.view.xml.MarshallingView"> 
+					<property name="marshaller"> <bean class="org.springframework.oxm.xstream.XStreamMarshaller"> 
+					<property name="autodetectAnnotations" value="true" /> </bean> </property> 
+					</bean> -->
+			</list>
+		</property>
+	</bean>
+	<!-- Restful Config End -->
+
+	<!-- 文件上传设置 -->
+	<bean id="multipartResolver"
+		class="org.springframework.web.multipart.commons.CommonsMultipartResolver">
+		<!--1024*1000=1000K -->
+		<property name="maxUploadSize" value="51200000" />
+		<!--resolveLazily属性启用是为了推迟文件解析，以便在UploadAction 中捕获文件大小异常 -->
+		<property name="resolveLazily" value="true" />
+	</bean>
+
+	<!-- Mapping exception to the handler view -->
+	<bean id="exceptionResolver" class="org.springframework.web.servlet.handler.SimpleMappingExceptionResolver">
+		<!-- to /commons/error.jsp -->
+		<property name="defaultErrorView" value="/error/exception" />
+		<property name="defaultStatusCode" value="500"></property>
+		<property name="statusCodes">
+			<props>
+				<prop key="/error/500">500</prop>
+				<prop key="/error/404">404</prop>
+				<prop key="/error/404">400</prop>
+			</props>
+		</property>
+		<!-- 设置日志输出级别，不定义则默认不输出警告等错误日志信息 -->
+		<property name="warnLogCategory" value="WARN"></property>
+		<property name="exceptionMappings">
+			<props>
+				<prop key="java.lang.Exception">/error/exception</prop>
+				<prop key="java.lang.RuntimeException">/error/exception</prop>
+				<prop
+					key="org.springframework.web.multipart.MaxUploadSizeExceededException">
+					/error/exception
+				</prop>
+			</props>
+		</property>
+	</bean>
+
+</beans>
