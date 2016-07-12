@@ -12,12 +12,11 @@ import org.quartz.TriggerBuilder;
 import org.quartz.TriggerKey;
 import org.springframework.context.support.FileSystemXmlApplicationContext;
 
-import cn.cjp.quartz.dto.JobOutput;
 import cn.cjp.quartz.job.SimpleJob;
 import cn.cjp.quartz.manager.QuartzManager;
 
 public class Demo {
-	
+
 	static FileSystemXmlApplicationContext ctx;
 
 	static QuartzManager quartzManager;
@@ -36,7 +35,7 @@ public class Demo {
 
 			quartzManager.updateJobDetail(job1);
 
-			List<JobOutput> list = quartzManager.getAllJobDetail();
+			List<JobDetail> list = quartzManager.getJobs();
 			System.out.println(list);
 		}
 

@@ -1,38 +1,32 @@
 <?xml version="1.0" encoding="utf-8"?>
 <beans xmlns="http://www.springframework.org/schema/beans"
-	xmlns:aop="http://www.springframework.org/schema/aop" xmlns:context="http://www.springframework.org/schema/context"
-	xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+	xmlns:aop="http://www.springframework.org/schema/aop" xmlns:task="http://www.springframework.org/schema/task"
+	xmlns:context="http://www.springframework.org/schema/context"
+	xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xmlns:util="http://www.springframework.org/schema/util"
 	xsi:schemaLocation="http://www.springframework.org/schema/beans
-	http://www.springframework.org/schema/beans/spring-beans-2.0.xsd
+	http://www.springframework.org/schema/beans/spring-beans.xsd
 	http://www.springframework.org/schema/context
 	http://www.springframework.org/schema/context/spring-context.xsd
+    http://www.springframework.org/schema/task
+    http://www.springframework.org/schema/task/spring-task.xsd
 	http://www.springframework.org/schema/aop
 	http://www.springframework.org/schema/aop/spring-aop.xsd
+	http://www.springframework.org/schema/util
+	http://www.springframework.org/schema/util/spring-util.xsd
 	">
+	
+	<context:component-scan base-package="cn.cjp">
+		<context:include-filter type="annotation" expression="org.springframework.stereotype.Service"/>
+		<context:include-filter type="annotation" expression="org.springframework.stereotype.Repository"/>
+		<context:include-filter type="annotation" expression="org.springframework.stereotype.Component"/>
+		<context:include-filter type="annotation" expression="cn.cjp.quartz.job.Job"/>
+	</context:component-scan>
+	
+	<context:annotation-config />
+	
 	<!-- Quartz管理类 -->
 	<bean id="quartzManager" class="cn.cjp.quartz.manager.QuartzManager">
 		<property name="scheduler" ref="springJobSchedulerFactoryBean"></property>
-	</bean>
-
-	<!-- 使用MethodInvokingJobDetailFactoryBean，任务类可以不实现Job接口，通过targetMethod指定调用方法，但会报不能序列化异常 -->
-	<bean id="simpleJobDetail"
-		class="org.springframework.scheduling.quartz.JobDetailFactoryBean">
-		<property name="name" value="exampleJob"></property>
-		<property name="jobClass" value="cn.cjp.quartz.job.SimpleJob"></property>
-		<property name="jobDataAsMap">
-			<map>
-				<entry key="service">
-					<value>simple is the beat</value>
-				</entry>
-			</map>
-		</property>
-	</bean>
-
-	<!-- ======================== 调度触发器 ======================== -->
-	<bean id="cronTriggerBean"
-		class="org.springframework.scheduling.quartz.CronTriggerFactoryBean">
-		<property name="jobDetail" ref="simpleJobDetail"></property>
-		<property name="cronExpression" value="0/5 * * * * ?"></property>
 	</bean>
 
 	<!-- ======================== 调度工厂 ======================== -->
@@ -40,14 +34,10 @@
 		class="org.springframework.scheduling.quartz.SchedulerFactoryBean">
 		<!-- 数据源 -->
 		<property name="dataSource" ref="quartzDataSource"></property>
+		<property name="overwriteExistingJobs" value="true"></property>
 		<!-- 自启动 -->
 		<property name="autoStartup" value="true"></property>
 		<property name="configLocation" value="classpath:./quartz.properties"></property>
-		<property name="triggers">
-			<list>
-				<ref bean="cronTriggerBean" />
-			</list>
-		</property>
 	</bean>
 
 	<!-- mysql,redis 连接配置 -->

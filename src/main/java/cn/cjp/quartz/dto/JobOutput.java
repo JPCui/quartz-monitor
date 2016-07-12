@@ -3,19 +3,17 @@ package cn.cjp.quartz.dto;
 import java.util.ArrayList;
 import java.util.List;
 
-import org.quartz.Job;
-
 public class JobOutput {
-	
+
 	private String name;
-	
+
 	private String group;
-	
+
 	private String description;
-	
+
 	private List<TriggerOutput> triggers = new ArrayList<>();
-	
-	private Class<? extends Job> targetObject;
+
+	private String targetObject;
 
 	public String getName() {
 		return name;
@@ -49,11 +47,11 @@ public class JobOutput {
 		this.triggers = triggers;
 	}
 
-	public Class<? extends Job> getTargetObject() {
+	public String getTargetObject() {
 		return targetObject;
 	}
 
-	public void setTargetObject(Class<? extends Job> targetObject) {
+	public void setTargetObject(String targetObject) {
 		this.targetObject = targetObject;
 	}
 

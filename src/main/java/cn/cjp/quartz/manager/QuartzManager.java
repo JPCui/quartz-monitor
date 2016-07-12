@@ -1,43 +1,162 @@
 package cn.cjp.quartz.manager;
 
+import java.text.ParseException;
 import java.util.ArrayList;
+import java.util.Date;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
-import java.util.Map.Entry;
 import java.util.Set;
 
 import org.apache.log4j.Logger;
+import org.quartz.CronScheduleBuilder;
 import org.quartz.CronTrigger;
+import org.quartz.Job;
+import org.quartz.JobBuilder;
 import org.quartz.JobDetail;
 import org.quartz.JobKey;
 import org.quartz.Scheduler;
 import org.quartz.SchedulerException;
 import org.quartz.Trigger;
 import org.quartz.Trigger.TriggerState;
+import org.quartz.TriggerBuilder;
 import org.quartz.TriggerKey;
 import org.quartz.impl.matchers.GroupMatcher;
+import org.springframework.util.StringUtils;
 
-import cn.cjp.quartz.dto.JobOutput;
-import cn.cjp.quartz.dto.TriggerOutput;
+import cn.cjp.util.DateUtil;
 
 /**
  * Quartz管理
+ * <p>
+ * 
+ * @note 1. 每次reschedule trigger都要 pauseTrigger -> reschedule -> resumeTrigger，
+ *       防止在reschedule的过程中发生连续调用（或在 <b>startTime之前</b> 按照cronExpression
+ *       <b>执行多次</b>job）。 猜测reschedule的过程是一个耗时的过程。
+ *       <p>
+ *       2. 如果想要修改JobDetail，可以尝试自定义数据库结构。
  * 
  * @author Jinpeng Cui
  *
  */
 public class QuartzManager {
-	
+
 	private final static Logger logger = Logger.getLogger(QuartzManager.class);
 
 	public final static String DATE_PATTERN = "yyyy-dd-MM hh:mm:ss";
 
 	private Scheduler scheduler;
-	
+
 	public QuartzManager() {
 		logger.info(getClass() + " init.");
+	}
+	// 如果trigger已存在，视为修改trigger
+
+	// 如果trigger不存在，视为添加trigger
+
+	public Map<String, Object> getJob(String jobGroup, String jobName, String triggerGroup, String triggerName)
+			throws SchedulerException {
+		JobKey jobKey = JobKey.jobKey(jobName, jobGroup);
+		TriggerKey triggerKey = TriggerKey.triggerKey(triggerName, triggerGroup);
+
+		if (!scheduler.checkExists(jobKey)) {
+			throw new SchedulerException("job 不存在");
+		}
+		JobDetail jobDetail = scheduler.getJobDetail(jobKey);
+
+		CronTrigger trigger = null;
+		if (!(StringUtils.isEmpty(triggerName) || StringUtils.isEmpty(triggerGroup)
+				|| !scheduler.checkExists(triggerKey))) {
+			trigger = (CronTrigger) scheduler.getTrigger(triggerKey);
+		}
+
+		Map<String, Object> data = new HashMap<>();
+		data.put("jobGroup", jobGroup);
+		data.put("jobName", jobName);
+		data.put("jobDescription", jobDetail.getDescription());
+		data.put("jobClass", jobDetail.getJobClass().getName());
+		if (null != trigger) {
+			data.put("triggerGroup", triggerGroup);
+			data.put("triggerName", triggerName);
+			data.put("cronExpression", trigger.getCronExpression());
+			data.put("triggerDescription", trigger.getDescription());
+			data.put("startTime", DateUtil.format(trigger.getStartTime(), DateUtil.DEFAULT_DATEFORMAT_PATTERN));
+		}
+
+		return data;
+	}
+
+	@SuppressWarnings("unchecked")
+	public void add(String jobGroup, String jobName, String jobDescription, String jobClass, String triggerGroup,
+			String triggerName, String triggerDescription, String cronExpression, String startTime)
+			throws ClassNotFoundException, SchedulerException {
+		Class<? extends Job> targetClass = (Class<? extends Job>) Class.forName(jobClass);
+
+		// 设置默认值
+		if (StringUtils.isEmpty(jobName)) {
+			jobName = targetClass.getSimpleName();
+		}
+		if (StringUtils.isEmpty(triggerGroup)) {
+			triggerGroup = jobGroup;
+		}
+		if (StringUtils.isEmpty(triggerName)) {
+			triggerName = jobName;
+		}
+		Date triggerStartTime = null;
+		if (StringUtils.isEmpty(startTime)) {
+			triggerStartTime = new Date();
+		} else {
+			try {
+				triggerStartTime = DateUtil.parse(startTime, DateUtil.DEFAULT_DATEFORMAT_PATTERN);
+			} catch (ParseException e) {
+				throw new SchedulerException("开始时间格式错误");
+			}
+		}
+
+		JobKey jobKey = JobKey.jobKey(jobName, jobGroup);
+		TriggerKey triggerKey = TriggerKey.triggerKey(triggerName, triggerGroup);
+
+		// 判断job是否已存在
+		if (scheduler.checkExists(jobKey)) {
+			// 更新
+			// 该操作修改job信息很难，后面可以自定义数据库结构
+		} else {
+			this.addJob(jobKey, targetClass, jobDescription);
+		}
+
+		// 判断trigger是否已存在，若不存在表示新加trigger，否则更新
+		TriggerBuilder<CronTrigger> triggerBuilder = TriggerBuilder.newTrigger()
+				.withSchedule(CronScheduleBuilder.cronSchedule(cronExpression));
+		triggerBuilder.withIdentity(triggerKey);
+		triggerBuilder.forJob(jobKey);
+		triggerBuilder.startAt(triggerStartTime);
+		triggerBuilder.withDescription(triggerDescription);
+		if (scheduler.checkExists(triggerKey)) {
+			this.updateCronTrigger(triggerKey, triggerBuilder.build());
+		} else {
+			this.scheduleJob(jobKey, targetClass, triggerBuilder.build());
+		}
+
+	}
+
+	/**
+	 * @deprecated
+	 * @param jobKey
+	 * @throws SchedulerException
+	 */
+	public void addJob(JobKey jobKey) throws SchedulerException {
+		this.addJob(jobKey, null, "");
+	}
+
+	public void addJob(JobKey jobKey, Class<? extends Job> job, String jobDescription) throws SchedulerException {
+		JobDetail jobDetail = JobBuilder.newJob(job).withIdentity(jobKey).withDescription(jobDescription)
+				.storeDurably(true).build();
+		scheduler.addJob(jobDetail, true);
+	}
+
+	public void triggerJob(JobKey jobKey) throws SchedulerException {
+		scheduler.triggerJob(jobKey);
 	}
 
 	/**
@@ -48,10 +167,15 @@ public class QuartzManager {
 	 * @param trigger
 	 * @return
 	 */
-	public boolean updateTrigger(String triggerName, String triggerGroup, Trigger trigger) {
+	public boolean updateTrigger(TriggerKey triggerKey, Trigger trigger) {
 		boolean flag = false;
 		try {
-			scheduler.rescheduleJob(new TriggerKey(triggerName, triggerGroup), trigger);
+			// 先暂停
+			scheduler.pauseTrigger(triggerKey);
+			// 重新部署
+			scheduler.rescheduleJob(triggerKey, trigger);
+			// 先暂停
+			scheduler.resumeTrigger(triggerKey);
 			flag = true;
 		} catch (Exception e) {
 			e.printStackTrace();
@@ -59,12 +183,8 @@ public class QuartzManager {
 		return flag;
 	}
 
-	public void scheduleJob(String jobName, String jobGroup, Trigger trigger) throws SchedulerException {
-		JobDetail jobDetail = scheduler.getJobDetail(JobKey.jobKey(jobName, jobGroup));
-		scheduleJob(jobDetail, trigger);
-	}
-
-	public void scheduleJob(JobDetail jobDetail, Trigger trigger) throws SchedulerException {
+	public void scheduleJob(JobKey jobKey, Class<? extends Job> job, Trigger trigger) throws SchedulerException {
+		JobDetail jobDetail = JobBuilder.newJob(job).withIdentity(jobKey).build();
 		HashSet<Trigger> triggers = new HashSet<>();
 		triggers.add(trigger);
 		scheduler.scheduleJob(jobDetail, triggers, true);
@@ -77,16 +197,15 @@ public class QuartzManager {
 	 * @param triggerGroup
 	 * @param cronTrigger
 	 * @return
+	 * @throws SchedulerException
 	 */
-	public boolean updateCronTrigger(String triggerName, String triggerGroup, CronTrigger cronTrigger) {
-		boolean flag = false;
-		try {
-			scheduler.rescheduleJob(new TriggerKey(triggerName, triggerGroup), cronTrigger);
-			flag = true;
-		} catch (Exception e) {
-			e.printStackTrace();
-		}
-		return flag;
+	public void updateCronTrigger(TriggerKey triggerKey, CronTrigger cronTrigger) throws SchedulerException {
+		// 先暂停
+		scheduler.pauseTrigger(triggerKey);
+		// 重新部署
+		scheduler.rescheduleJob(triggerKey, cronTrigger);
+		// 先暂停
+		scheduler.resumeTrigger(triggerKey);
 	}
 
 	/**
@@ -106,6 +225,11 @@ public class QuartzManager {
 		return flag;
 	}
 
+	public boolean unscheduleJob(TriggerKey triggerKey) throws SchedulerException {
+		scheduler.pauseTrigger(triggerKey);// 停止触发器
+		return scheduler.unscheduleJob(triggerKey);// 移除触发器
+	}
+
 	/**
 	 * 删除Job,直接从数据库中删除，关联表数据也删除
 	 * 
@@ -113,23 +237,17 @@ public class QuartzManager {
 	 * @param triggerGroup
 	 * @param jobName
 	 * @param jobGroup
+	 * @throws SchedulerException
 	 */
-	public boolean deleteJob(String triggerName, String triggerGroup, String jobName, String jobGroup) {
-		boolean flag = false;
-		try {
-			scheduler.pauseTrigger(new TriggerKey(triggerName, triggerGroup));// 停止触发器
-			scheduler.unscheduleJob(new TriggerKey(triggerName, triggerGroup));// 移除触发器
-			scheduler.deleteJob(new JobKey(jobName, jobGroup));// 删除任务
-			flag = true;
-		} catch (Exception e) {
-			e.printStackTrace();
-		}
-		return flag;
+	public void deleteJob(TriggerKey triggerKey, JobKey jobKey) throws SchedulerException {
+		scheduler.pauseTrigger(triggerKey);// 停止触发器
+		scheduler.unscheduleJob(triggerKey);// 移除触发器
+		scheduler.deleteJob(jobKey);// 删除任务
 	}
 
-	public boolean deleteJob(String jobName, String jobGroup) throws SchedulerException {
-		scheduler.pauseJob(JobKey.jobKey(jobName, jobGroup));
-		return scheduler.deleteJob(JobKey.jobKey(jobName, jobGroup));
+	public boolean deleteJob(JobKey jobKey) throws SchedulerException {
+		scheduler.pauseJob(jobKey);
+		return scheduler.deleteJob(jobKey);
 	}
 
 	/**
@@ -138,17 +256,10 @@ public class QuartzManager {
 	 * @param triggerName
 	 * @param triggerGroup
 	 * @return
+	 * @throws SchedulerException
 	 */
-	public boolean pauseTrigger(String triggerName, String triggerGroup) {
-		boolean flag = false;
-		try {
-			// 暂停触发器
-			scheduler.pauseTrigger(new TriggerKey(triggerName, triggerGroup));
-			flag = true;
-		} catch (Exception e) {
-			e.printStackTrace();
-		}
-		return flag;
+	public void pauseTrigger(TriggerKey triggerKey) throws SchedulerException {
+		scheduler.pauseTrigger(triggerKey);
 	}
 
 	/**
@@ -157,52 +268,21 @@ public class QuartzManager {
 	 * @param triggerName
 	 * @param triggerGroup
 	 * @return
+	 * @throws SchedulerException
 	 */
-	public boolean resumeTrigger(String triggerName, String triggerGroup) {
-		boolean flag = false;
-		try {
-			// 暂停触发器
-			scheduler.resumeTrigger(new TriggerKey(triggerName, triggerGroup));
-			flag = true;
-		} catch (Exception e) {
-			e.printStackTrace();
-		}
-		return flag;
-	}
-
-	/**
-	 * 立即执行JOB
-	 * 
-	 * @param jobName
-	 * @param jobGroup
-	 * @return
-	 */
-	public boolean runAJobNow(String jobName, String jobGroup) {
-		boolean flag = false;
-		try {
-			// 立即执行JOB
-			scheduler.triggerJob(new JobKey(jobName, jobGroup));
-			flag = true;
-		} catch (Exception e) {
-			e.printStackTrace();
-		}
-		return flag;
+	public void resumeTrigger(TriggerKey triggerKey) throws SchedulerException {
+		// 暂停触发器
+		scheduler.resumeTrigger(triggerKey);
 	}
 
 	/**
 	 * 暂停所有触发器
 	 * 
 	 * @return
+	 * @throws SchedulerException
 	 */
-	public boolean pauseAllTrigger() {
-		boolean flag = false;
-		try {
-			scheduler.standby();
-			flag = true;
-		} catch (Exception e) {
-			e.printStackTrace();
-		}
-		return flag;
+	public void standby() throws SchedulerException {
+		scheduler.standby();
 	}
 
 	/**
@@ -228,7 +308,7 @@ public class QuartzManager {
 	 * 
 	 * @return
 	 */
-	public boolean shutdownTrigger() {
+	public boolean shutdown() {
 		boolean flag = false;
 		try {
 			scheduler.shutdown();
@@ -239,75 +319,26 @@ public class QuartzManager {
 		return flag;
 	}
 
-	/**
-	 * 返回所有jobDetail
-	 * 
-	 * @return
-	 */
-	public List<JobOutput> getAllJobDetail() {
-		List<JobOutput> list = new ArrayList<JobOutput>();
-		try {
-			Set<JobKey> jobKeys = scheduler.getJobKeys(GroupMatcher.anyJobGroup());
-			for (JobKey jobKey : jobKeys) {
-				JobDetail jobDetail = scheduler.getJobDetail(jobKey);
-
-				JobOutput jobOutput = new JobOutput();
-				// job组
-				jobOutput.setGroup(jobKey.getGroup());
-				// job名称
-				jobOutput.setName(jobKey.getName());
-				// job业务描述
-				jobOutput.setDescription(jobDetail.getDescription());
-				// 以下返回该任务的trigger信息
-				List<? extends Trigger> triggers = scheduler.getTriggersOfJob(jobKey);
-				// 执行计划表达式
-				String cronExpression = null;
-				// // 触发器状态编码
-				// TriggerState triggerState = null;
-				// // 触发器描述
-				// String triggerDesc = null;
-				// 触发器名称
-				String triggerName = null;
-				// 触发器组名
-				String triggerGroup = null;
-				for (Trigger trigger : triggers) {
-					cronExpression = ((CronTrigger) trigger).getCronExpression();
-					triggerName = trigger.getKey().getName();
-					triggerGroup = trigger.getKey().getGroup();
-
-					TriggerOutput triggerOutput = new TriggerOutput();
-					triggerOutput.setCronExpression(cronExpression);
-					triggerOutput.setStartTime(trigger.getStartTime());
-					triggerOutput.setPreviousFireTime(trigger.getPreviousFireTime());
-					triggerOutput.setName(triggerName);
-					triggerOutput.setGroup(triggerGroup);
-					triggerOutput.setDescription(trigger.getDescription());
-					triggerOutput.setState(parseTriggerState(scheduler.getTriggerState(trigger.getKey())));
-					jobOutput.getTriggers().add(triggerOutput);
-				}
-				// DELETED -1 COMPLETE 2 PAUSED 1 PAUSED_BLOCKED 1 ERROR 3
-				// BLOCKED 4 否则 返回0
-				/*
-				 * None：Trigger已经完成，且不会在执行，或者找不到该触发器，或者Trigger已经被删除
-				 * COMPLETE：触发器完成，但是任务可能还正在执行中 PAUSED：暂停状态 BLOCKED：线程阻塞状态
-				 * NORMAL:正常状态 BLOCKED：线程阻塞状态
-				 */
-				HashMap<String, String> targerMap = new HashMap<String, String>();
-				for (Object e : jobDetail.getJobDataMap().entrySet()) {
-					Map.Entry<?, ?> entry = (Entry<?, ?>) e;
-					targerMap.put(entry.getKey().toString(), entry.getValue().toString());
-				}
-				// 任务实现类
-				jobOutput.setTargetObject(jobDetail.getJobClass());
-				list.add(jobOutput);
-			}
-		} catch (Exception e) {
-			e.printStackTrace();
+	public List<JobDetail> getJobs() throws SchedulerException {
+		List<JobDetail> jobDetails = new ArrayList<>();
+		Set<JobKey> jobKeys = scheduler.getJobKeys(GroupMatcher.anyJobGroup());
+		for (JobKey jobKey : jobKeys) {
+			JobDetail jobDetail = scheduler.getJobDetail(jobKey);
+			jobDetails.add(jobDetail);
 		}
-		return list;
+		return jobDetails;
 	}
 
-	private String parseTriggerState(TriggerState triggerState) {
+	public List<? extends Trigger> getTriggersOfJob(JobKey jobKey) throws SchedulerException {
+		List<? extends Trigger> triggers = scheduler.getTriggersOfJob(jobKey);
+		return triggers;
+	}
+
+	public TriggerState getTriggerState(TriggerKey triggerKey) throws SchedulerException {
+		return scheduler.getTriggerState(triggerKey);
+	}
+
+	public static String parseTriggerState(TriggerState triggerState) {
 		String triggerDesc = null;
 		switch (triggerState) {
 		case NORMAL:

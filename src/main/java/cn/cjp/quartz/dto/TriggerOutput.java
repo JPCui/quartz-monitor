@@ -1,13 +1,11 @@
 package cn.cjp.quartz.dto;
 
-import java.util.Date;
-
 public class TriggerOutput {
 
 	private String key;
-	
+
 	private String name;
-	
+
 	private String group;
 
 	public String getName() {
@@ -27,7 +25,7 @@ public class TriggerOutput {
 	}
 
 	private String state;
-	
+
 	private String jobKey;
 
 	private String description;
@@ -38,13 +36,16 @@ public class TriggerOutput {
 
 	private int priority;
 
-	private Date startTime;
+	private String startTime;
 
-	private Date endTime;
+	private String endTime;
 
-	private Date nextFireTime;
+	private String nextFireTime;
 
-	private Date previousFireTime;
+	/**
+	 * 上次暂停时间
+	 */
+	private String previousFireTime;
 
 	public String getKey() {
 		return key;
@@ -86,35 +87,35 @@ public class TriggerOutput {
 		this.priority = priority;
 	}
 
-	public Date getStartTime() {
+	public String getStartTime() {
 		return startTime;
 	}
 
-	public void setStartTime(Date startTime) {
+	public void setStartTime(String startTime) {
 		this.startTime = startTime;
 	}
 
-	public Date getEndTime() {
+	public String getEndTime() {
 		return endTime;
 	}
 
-	public void setEndTime(Date endTime) {
+	public void setEndTime(String endTime) {
 		this.endTime = endTime;
 	}
 
-	public Date getNextFireTime() {
+	public String getNextFireTime() {
 		return nextFireTime;
 	}
 
-	public void setNextFireTime(Date nextFireTime) {
+	public void setNextFireTime(String nextFireTime) {
 		this.nextFireTime = nextFireTime;
 	}
 
-	public Date getPreviousFireTime() {
+	public String getPreviousFireTime() {
 		return previousFireTime;
 	}
 
-	public void setPreviousFireTime(Date previousFireTime) {
+	public void setPreviousFireTime(String previousFireTime) {
 		this.previousFireTime = previousFireTime;
 	}
 

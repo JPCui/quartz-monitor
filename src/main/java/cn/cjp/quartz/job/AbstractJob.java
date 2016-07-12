@@ -1,4 +1,4 @@
-package cn.cjp.quartz;
+package cn.cjp.quartz.job;
 
 import org.apache.log4j.Logger;
 import org.quartz.Job;
