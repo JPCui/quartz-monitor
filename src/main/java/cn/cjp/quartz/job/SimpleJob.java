@@ -16,7 +16,7 @@ public class SimpleJob extends AbstractJob {
 
 	@Override
 	public void execute() {
-		logger.info("simple job running...");
+		logger.debug("simple job running...");
 	}
 
 }

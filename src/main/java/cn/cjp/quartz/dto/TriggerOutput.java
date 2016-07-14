@@ -40,10 +40,13 @@ public class TriggerOutput {
 
 	private String endTime;
 
+	/**
+	 * 下次触发时间
+	 */
 	private String nextFireTime;
 
 	/**
-	 * 上次暂停时间
+	 * 上次触发时间
 	 */
 	private String previousFireTime;
 

@@ -14,24 +14,32 @@
 	http://www.springframework.org/schema/util
 	http://www.springframework.org/schema/util/spring-util.xsd
 	">
-	
+
 	<context:component-scan base-package="cn.cjp">
-		<context:include-filter type="annotation" expression="org.springframework.stereotype.Service"/>
-		<context:include-filter type="annotation" expression="org.springframework.stereotype.Repository"/>
-		<context:include-filter type="annotation" expression="org.springframework.stereotype.Component"/>
-		<context:include-filter type="annotation" expression="cn.cjp.quartz.job.Job"/>
+		<context:include-filter type="annotation"
+			expression="org.springframework.stereotype.Service" />
+		<context:include-filter type="annotation"
+			expression="org.springframework.stereotype.Repository" />
+		<context:include-filter type="annotation"
+			expression="org.springframework.stereotype.Component" />
+		<!-- <context:include-filter type="annotation" expression="cn.cjp.quartz.job.Job"/> -->
 	</context:component-scan>
-	
+
 	<context:annotation-config />
-	
+
 	<!-- Quartz管理类 -->
 	<bean id="quartzManager" class="cn.cjp.quartz.manager.QuartzManager">
 		<property name="scheduler" ref="springJobSchedulerFactoryBean"></property>
 	</bean>
 
 	<!-- ======================== 调度工厂 ======================== -->
+	<!-- 默认使用classpath:quartz.properties初始化Scheduler -->
 	<bean id="springJobSchedulerFactoryBean"
 		class="org.springframework.scheduling.quartz.SchedulerFactoryBean">
+		<!-- 将Job交由Spring管理 -->
+		<property name="jobFactory">
+			<bean class="cn.cjp.quartz.job.SpringJobBeanFactory" />
+		</property>
 		<!-- 数据源 -->
 		<property name="dataSource" ref="quartzDataSource"></property>
 		<property name="overwriteExistingJobs" value="true"></property>

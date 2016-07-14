@@ -149,8 +149,11 @@ form label {
 	<td>Trigger State</td>
 	<td>Trigger Description</td>
 	<td>cronExpression</td>
-	<td>startTime</td>
-	<td>previousFireTime</td>
+	<td>Trigger Priority</td>
+	<td>Start Time</td>
+	<td>End Time</td>
+	<td>Previous FireTime</td>
+	<td>Next FireTime</td>
 	
 	<td>manage</td>
 	</tr>
@@ -168,8 +171,11 @@ form label {
 		<td>${trigger.state}</td>
 		<td>${trigger.description}</td>
 		<td>${trigger.cronExpression}</td>
+		<td>${trigger.priority}</td>
 		<td>${trigger.startTime}</td>
+		<td>${trigger.endTime}</td>
 		<td>${trigger.previousFireTime}</td>
+		<td>${trigger.nextFireTime}</td>
 		
 		<td>
 		<a href="edit?jobGroup=${l.group}&jobName=${l.name}&triggerGroup=${trigger.group}&triggerName=${trigger.name}">修改</a>
@@ -198,8 +204,11 @@ form label {
 		<td>${trigger.state}</td>
 		<td>${trigger.description}</td>
 		<td>${trigger.cronExpression}</td>
+		<td>${trigger.priority}</td>
 		<td>${trigger.startTime}</td>
+		<td>${trigger.endTime}</td>
 		<td>${trigger.previousFireTime}</td>
+		<td>${trigger.nextFireTime}</td>
 		
 		<td>
 		<a href="edit?jobGroup=${l.group}&jobName=${l.name}&triggerGroup=${trigger.group}&triggerName=${trigger.name}">修改</a>
