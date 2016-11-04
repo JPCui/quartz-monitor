@@ -15,4 +15,6 @@ import java.lang.annotation.Target;
 @Retention(RUNTIME)
 public @interface Job {
 
+	public String group();
+	
 }

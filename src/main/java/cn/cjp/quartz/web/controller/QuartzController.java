@@ -5,6 +5,7 @@ import java.util.List;
 import java.util.Map;
 
 import org.quartz.JobKey;
+import org.quartz.Scheduler;
 import org.quartz.SchedulerException;
 import org.quartz.TriggerKey;
 import org.springframework.beans.factory.InitializingBean;
@@ -24,8 +25,20 @@ public class QuartzController implements InitializingBean {
 
 	@Autowired
 	JobService jobService;
+	
+	@Autowired
+	Scheduler scheduler;
 
 	private List<String> registedJobs = null;
+	
+	@RequestMapping("/start")
+	public ModelAndView start() throws SchedulerException {
+		ModelAndView mv = this.findAll();
+		if(!scheduler.isStarted()) {
+			scheduler.start();
+		}
+		return mv;
+	}
 
 	@RequestMapping("/findAll")
 	public ModelAndView findAll() {
@@ -44,7 +57,6 @@ public class QuartzController implements InitializingBean {
 		ModelAndView mv = this.findAll();
 		Map<String, Object> data = jobService.getJob(jobGroup, jobName, triggerGroup, triggerName);
 		mv.addObject("data", data);
-
 		return mv;
 	}
 

@@ -174,7 +174,7 @@ public class QuartzManager {
 			scheduler.pauseTrigger(triggerKey);
 			// 重新部署
 			scheduler.rescheduleJob(triggerKey, trigger);
-			// 先暂停
+			// 最后恢复
 			scheduler.resumeTrigger(triggerKey);
 			flag = true;
 		} catch (Exception e) {
@@ -204,7 +204,7 @@ public class QuartzManager {
 		scheduler.pauseTrigger(triggerKey);
 		// 重新部署
 		scheduler.rescheduleJob(triggerKey, cronTrigger);
-		// 先暂停
+		// 最后恢复
 		scheduler.resumeTrigger(triggerKey);
 	}
 

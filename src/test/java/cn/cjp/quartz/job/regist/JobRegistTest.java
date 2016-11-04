@@ -24,7 +24,7 @@ import cn.cjp.quartz.job.SimpleJob;
 @Configurable
 @ComponentScan(value = { "cn.cjp.quartz.job" }, includeFilters = {
 		@Filter(type = FilterType.ANNOTATION, value = Job.class) })
-@Job
+@Job(group = "test")
 public class JobRegistTest extends AbstractJob {
 
 	private static final Logger logger = Logger.getLogger(JobRegistTest.class);

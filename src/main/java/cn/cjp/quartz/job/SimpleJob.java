@@ -9,7 +9,7 @@ import org.springframework.scheduling.quartz.QuartzJobBean;
  * @author Jinpeng Cui
  * @see QuartzJobBean
  */
-@Job
+@Job(group = "simple")
 public class SimpleJob extends AbstractJob {
 
 	private final static Logger logger = Logger.getLogger(SimpleJob.class);

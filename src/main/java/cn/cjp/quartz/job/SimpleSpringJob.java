@@ -11,7 +11,7 @@ import cn.cjp.quartz.service.SpringJobService;
  * @author Jinpeng Cui
  *
  */
-@Job
+@Job(group = "simple_spring")
 public class SimpleSpringJob extends AbstractJob {
 
 	private static final Logger logger = Logger.getLogger(SimpleSpringJob.class);

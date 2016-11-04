@@ -36,6 +36,7 @@
 	<!-- 默认使用classpath:quartz.properties初始化Scheduler -->
 	<bean id="springJobSchedulerFactoryBean"
 		class="org.springframework.scheduling.quartz.SchedulerFactoryBean">
+		<property name="autoStartup" value="false"></property>
 		<!-- 将Job交由Spring管理 -->
 		<property name="jobFactory">
 			<bean class="cn.cjp.quartz.job.SpringJobBeanFactory" />
@@ -44,7 +45,6 @@
 		<property name="dataSource" ref="quartzDataSource"></property>
 		<property name="overwriteExistingJobs" value="true"></property>
 		<!-- 自启动 -->
-		<property name="autoStartup" value="true"></property>
 		<property name="configLocation" value="classpath:./quartz.properties"></property>
 	</bean>
 
@@ -54,9 +54,12 @@
 		<property name="locations">
 			<list>
 				<value>classpath:./mysql.properties</value>
+				<value>classpath:./wx.properties</value>
+				<value>classpath:./tuling123.properties</value>
 			</list>
 		</property>
 		<property name="ignoreUnresolvablePlaceholders" value="true" />
+		<property name="fileEncoding" value="UTF-8"></property>
 	</bean>
 
 	<!-- 数据源的配置 begin -->
