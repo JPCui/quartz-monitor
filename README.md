@@ -14,7 +14,7 @@
 	
 # Questions
 
-任务恢复之后运行多次的原因：[quartz重复执行的问题](http://bbs.csdn.net/topics/391903644)
+任务恢复之后运行多次的原因：[quartz重复执行的问题](https://github.com/JPCui/quartz-monitor/issues/1)
 
 # Version Update
 
